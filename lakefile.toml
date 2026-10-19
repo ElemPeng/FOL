@@ -1,0 +1,10 @@
+name = "FOL"
+version = "0.1.0"
+defaultTargets = ["fol"]
+
+[[lean_lib]]
+name = "FOL"
+
+[[lean_exe]]
+name = "fol"
+root = "Main"
