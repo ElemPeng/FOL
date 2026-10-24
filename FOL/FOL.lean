@@ -71,6 +71,43 @@ def TermSet.vars : TermSet → TermSet :=
       apply Quotient.sound
       exact Pset.vars_respects h)
 
+def Pset.erase (s : Pset) (n : Nat) : Pset :=
+  ⟨s.set.filter (fun t => decide (t ≠ .var n)), s.nodup.filter _⟩
+
+@[simp] theorem Pset.mem_erase (t : Term) (s : Pset) (n : Nat) :
+    t ∈ Pset.erase s n ↔ t ∈ s ∧ t ≠ .var n := by
+  change t ∈ s.set.filter (fun t => decide (t ≠ .var n)) ↔
+    t ∈ s.set ∧ t ≠ .var n
+  simp
+
+theorem Pset.erase_respects {x y : Pset} (h : eqrel x y) (n : Nat) :
+    eqrel (Pset.erase x n) (Pset.erase y n) := by
+  unfold eqrel
+  constructor
+  · intro t ht
+    have ht' : t ∈ Pset.erase x n := by
+      change t ∈ (Pset.erase x n).set
+      exact ht
+    have hm := (Pset.mem_erase t x n).1 ht'
+    apply (Pset.mem_erase t y n).2
+    exact ⟨h.1 hm.1, hm.2⟩
+  · intro t ht
+    have ht' : t ∈ Pset.erase y n := by
+      change t ∈ (Pset.erase y n).set
+      exact ht
+    have hm := (Pset.mem_erase t y n).1 ht'
+    apply (Pset.mem_erase t x n).2
+    exact ⟨h.2 hm.1, hm.2⟩
+
+def TermSet.erase (s : TermSet) (n : Nat) : TermSet :=
+  Quotient.lift
+    (fun p => TermSet.mk (Pset.erase p n))
+    (by
+      intro x y h
+      apply Quotient.sound
+      exact Pset.erase_respects h n)
+    s
+
 def Pset.union (x y : Pset) : Pset :=
   let right := y.set.filter fun t => decide (t ∉ x.set)
   have hright : right.Nodup := y.nodup.filter _
@@ -138,6 +175,7 @@ inductive Wff where
 | pred : TermSet → Wff
 | not : Wff → Wff
 | imp : Wff → Wff → Wff
+| all : Nat → Wff → Wff
 
 infix:63 "≐" => Wff.eq
 prefix:60 "~" => Wff.not
@@ -148,3 +186,4 @@ def Wff.FreeVars : Wff → TermSet
 | pred s => TermSet.vars s
 | not p => p.FreeVars
 | imp p q => p.FreeVars ∪ q.FreeVars
+| all n p => p.FreeVars.erase n
